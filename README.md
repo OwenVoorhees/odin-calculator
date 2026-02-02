@@ -1,2 +1,2 @@
-# odin-calculator
-Calculator project
+# odin-calc
+odin-project-calculator
