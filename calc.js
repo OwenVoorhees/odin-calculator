@@ -3,8 +3,8 @@
 /////////////////////////////////////////////////
 const maxEquationLength = 20;
 
-// how many decimal points
-const decimals = Math.pow(10, 5);
+// how many decimal points (2nd number)
+const decimals = Math.pow(10, 7);
 
 // how many items in the equation that we have
 let equationLength = 0;
@@ -208,15 +208,15 @@ function solveEq(operand1, operator, operand2) {
     if(operator === "+") {
       lastNum = operand2;
       lastOp = operator;
-      return (operand1 + operand2);
+      return Math.round((operand1 + operand2) * decimals) / decimals;
     } else if(operator === "-") {
       lastOp = operator;
       lastNum = operand2;
-      return (operand1 - operand2);
+      return Math.round((operand1 - operand2) * decimals) / decimals;
     } else if(operator === "×") {
       lastOp = operator;
       lastNum = operand2;
-      return (operand1 * operand2);
+      return Math.round((operand1 * operand2) * decimals) / decimals;
     } else {
       alert("Invalid Equation.");
       return operand1;
