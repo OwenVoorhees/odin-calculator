@@ -3,6 +3,9 @@
 /////////////////////////////////////////////////
 const maxEquationLength = 20;
 
+// how many decimal points
+const decimals = Math.pow(10, 5);
+
 // how many items in the equation that we have
 let equationLength = 0;
 
@@ -16,22 +19,55 @@ document.getElementById("equation").innerHTML = (equation);
 // used to prevent + + + with no numbers in between
 let needNumber = true;
 
+// was the last item a decimal?
+let lastDecimal = false;
+
+// the last operator
+var lastOp = "";
+var lastNum = "";
+
+/**
+ * Method using for debugging
+ */
+function debug() {
+  // run for the next couple iterations
+  for(var i = 0; i < 0; i++) {
+    var debugStr = " EQ: |" + equation + 
+              "|\n Last Op: ." + lastOp +
+              ".\n Last Num: |" + lastNum +
+              "\n Need Num: " + needNumber +
+              "\n Last Decimal: " + lastDecimal +
+              " Length: " + equationLength;
+
+    document.getElementById("debug").innerHTML = (debugStr);
+  }
+}
+
 /**
  * Adds an operator or number to the equation variable, ensuring
  * an operator cannot be added twice in a row
  */
-function addEquation(symbol, operator=false) {
+function addEquation(symbol, operator=false, decimal=false) {
   if(needNumber && operator) {
     // error
     alert("Please select a number next.");
   } else if (equationLength >= maxEquationLength || (operator && equationLength >= maxEquationLength - 2)) {
     // make sure the equation isnt too long, and dont trap the user where they end on an operator
     alert("Please solve before entering more numbers");
+  } else if (decimal && lastDecimal) {
+    alert("Decimals cannot be added twice in a row");
   } else {
-    // add a space when adding an operator
-    if(operator) {
+    // special case, adding a decimal
+    if(decimal) {
+      lastDecimal = true;
+      equation = equation + ".";
+      equationLength++;
+    } else if(operator) { // add a space when adding an operator
       equation = equation + " " + symbol + " ";
       equationLength += 3;
+      lastDecimal = false;
+      lastOp = symbol;
+      lastNum = "";
     } else {
       // add a number right after the other
       equation = equation + symbol;
@@ -43,8 +79,9 @@ function addEquation(symbol, operator=false) {
     
     // update the html after adding to the equation
     document.getElementById("equation").innerHTML = (equation);
-    
   }
+
+  debug();
 }
 
 ///////////////////////////////////////////////
@@ -87,6 +124,8 @@ b9.addEventListener("click", () => addEquation("9"));
 function clearEquation() {
   equation = "";
   equationLength = 0;
+  needNumber = true;
+  lastDecimal = false;
   document.getElementById("equation").innerHTML = (equation);
 }
 const clear = document.querySelector("#clear");
@@ -94,28 +133,97 @@ clear.addEventListener("click", () => clearEquation());
 
 /** Equals Button **/
 const equals = document.querySelector("#equals");
-equals.addEventListener("click", solve);
+equals.addEventListener("click", () => solve());
+
+/** Decimal Button */
+const bd = document.querySelector("#bd");
+bd.addEventListener("click", () => addEquation("", false, true));
+
+/** Back Button */
+function backspace() {
+  debug();
+
+  // special case, no equation
+  if(equationLength === 0) {
+    return;
+  }
+
+  // reset the last variables 
+  lastOp = "";
+  lastNum = "";
+
+    // special case, equation of length one
+  if(equationLength === 1) {
+    equation = "";
+    equationLength = 0;
+    needNumber = true;
+    lastDecimal = false;
+    document.getElementById("equation").innerHTML = (equation);
+    return;
+  }
+
+  // standard removal is 1 character
+  let number = 1;
+
+  // first, handle removing a single decimal
+  if(lastDecimal && equation.substring(equationLength - 1, equationLength) === ".") {
+    lastDecimal = false;
+  }
+
+  // special case: removing the last character before an operator
+  if(!needNumber && equation.toString().substring(equationLength - 1, equationLength) !== " " && equationLength > 1) {
+    needNumber = true;
+  } else if(needNumber && equation.toString().substring(equationLength - 1, equationLength) === " ") {
+    // Special case: removing an operator
+    number = 3;
+    needNumber = false;
+  } 
+
+  // remove the characters
+  equation = equation.toString().substring(0, equation.toString().length - number);
+  equationLength =  equationLength - number;
+
+  // update the equation display
+  document.getElementById("equation").innerHTML = (equation);
+
+  
+  debug();
+}
+const back = document.querySelector("#back");
+back.addEventListener("click",  () => backspace());
 
 /**
  * Solves an equation given two operands and an operator
  */
 function solveEq(operand1, operator, operand2) {
-  if(operator === "+") {
-    return (operand1 + operand2);
-  } else if(operator === "-") {
-    return (operand1 - operand2);
-  } else if(operator === "×") {
-    return (operand1 * operand2);
-  } else if(operator === "÷") {
+  if(operator === "÷") {
     if(operand2 === 0) {
       alert("Cannot Divide by zero.");
       return 0;
     }
-    return Math.round(operand1 / operand2);
+    lastOp = operator;
+    lastNum = operand2;
+    return Math.round((operand1 / operand2) * decimals) / decimals;
   } else {
-    alert("Invalid Equation.");
+    if(operator === "+") {
+      lastNum = operand2;
+      lastOp = operator;
+      return (operand1 + operand2);
+    } else if(operator === "-") {
+      lastOp = operator;
+      lastNum = operand2;
+      return (operand1 - operand2);
+    } else if(operator === "×") {
+      lastOp = operator;
+      lastNum = operand2;
+      return (operand1 * operand2);
+    } else {
+      alert("Invalid Equation.");
+      return operand1;
+    }
   }
-  return operand1;
+  
+  
 }
 
 /**
@@ -147,47 +255,64 @@ function solve() {
     // first get the first operand, but only on the first loop
     // since we only do this once at the start of the equation, we do not need anything fancy
     if(firstLoop) {
-      total = parseInt(equation);
+      total = parseFloat(equation);
 
       idx = total.toString().length;
     }
 
-    // skip the space before the operator
-    idx++;
-
-    // next get the operator, remove spaces
-    var operator = equation.substring(idx, idx + 1);
-
-    // skip the space before the operator
-    idx++;
-
-    // next get the second operand
-    var operand2 = parseInt(equation.substring(idx));
-
-    // update the idx to include the second operator
-    idx = idx + operand2.toString().length; 
-
-    // do the calculation
-    total = solveEq(total, operator, operand2);
-
-    // indicate that we have completed the first loop
-    firstLoop = false;
-
-    // prepare for the next loop
-    idx++;
-
-    // have we reached the end of the equation?
-    if(idx >= equationLength) {
+    // detect a repeat equals and act
+    if(!needNumber && lastOp !== "" && lastNum !== "") {
+      total = solveEq(total, lastOp, lastNum);
       end = true;
+    } else {
+      // skip the space before the operator
+      idx++;
+
+      // next get the operator, remove spaces
+      var operator = equation.substring(idx, idx + 1);
+
+      // skip the space before the operator
+      idx++;
+
+      // next get the second operand
+      var operand2 = parseFloat(equation.substring(idx));
+
+      // update the idx to include the second operator
+      idx = idx + operand2.toString().length; 
+
+      // do the calculation
+      total = solveEq(total, operator, operand2);
+
+      // indicate that we have completed the first loop
+      firstLoop = false;
+
+      // prepare for the next loop
+      idx++;
+
+      // have we reached the end of the equation?
+      if(idx >= equationLength) {
+        end = true;
+      }
     }
   }
 
   // update the equation length
   equationLength = total.toString().length;
+
+  // after calculation, update vars
+  needNumber = false;
+  
+  // conditionally check for decimal points
+  if(parseFloat(equation.toString()) > parseInt(equation.toString())) {
+    lastDecimal = true;
+  }
   
   // store the result in the equation
   equation = total;
 
   // update the html after solving
   document.getElementById("equation").innerHTML = (equation);
+
+  // used for debuggign
+  debug();
 }
