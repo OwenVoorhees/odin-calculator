@@ -3,6 +3,9 @@
 /////////////////////////////////////////////////
 const maxEquationLength = 20;
 
+// Reloads the browser to ensure older versions will update with new style
+window.location.reload();
+
 // how many decimal points
 const decimals = Math.pow(10, 5);
 
